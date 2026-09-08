@@ -39,7 +39,7 @@ jobs:
           sudo apt-get install -y openssh-server rsync
           sudo --preserve-env=CINDER_PUBLIC_KEY,GITHUB_RUN_ID,GITHUB_RUN_ATTEMPT,GITHUB_WORKSPACE,RUNNER_TEMP python3 scripts/runner.py start
       - name: Publish connection details
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cinder-${{ github.run_id }}
           path: ${{ runner.temp }}/cinder-connection/connection.json

@@ -16,35 +16,39 @@ Requirements: Python 3.10+, GitHub CLI, OpenSSH, rsync, and a connected Tailscal
 2. Connect the CLI machine to Tailscale:
 
 ```bash
+# Install the Tailscale CLI.
 brew install tailscale
+# Log in and bring this machine onto your tailnet.
 sudo tailscale up
 ```
 
 3. Create a Tailscale OAuth client at <https://login.tailscale.com/admin/settings/oauth> with write scopes `auth_keys` and `policy_file`, and `tag:cinder` attached to `auth_keys`. Store its credentials as GitHub secrets:
 
 ```bash
+# Fill in your OAuth client credentials and target repo.
 export TS_ID='<client-id>'
 export TS_SECRET='<client-secret>'
+export OWNER='<github-username>'
+export REPO='<repo-name>'
+# Authenticate the GitHub CLI.
 gh auth login
-gh secret set TS_OAUTH_CLIENT_ID --repo OWNER/REPO --body "$TS_ID"
-gh secret set TS_OAUTH_SECRET --repo OWNER/REPO --body "$TS_SECRET"
+# Store the OAuth client ID as a repo secret.
+gh secret set TS_OAUTH_CLIENT_ID --repo $OWNER/$REPO --body "$TS_ID"
+# Store the OAuth client secret as a repo secret.
+gh secret set TS_OAUTH_SECRET --repo $OWNER/$REPO --body "$TS_SECRET"
 ```
 
 4. Push the tailnet policy (`tag:cinder` owner and a `tcp:2222` grant from the operator identity):
 
 ```bash
-export OPERATOR='operator@example.com'
-TOKEN=$(curl -sf https://api.tailscale.com/api/v2/oauth/token \
-  -d "client_id=$TS_ID" -d "client_secret=$TS_SECRET" | jq -r .access_token)
-curl -sf -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' \
-  https://api.tailscale.com/api/v2/tailnet/-/acl \
-| jq --arg op "$OPERATOR" '
-    .tagOwners["tag:cinder"] = ["autogroup:admin"]
-  | .grants = ((.grants // []) + [{"src":[$op],"dst":["tag:cinder"],"ip":["tcp:2222"]}])
-  ' > /tmp/cinder-acl.json
-curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  --data-binary @/tmp/cinder-acl.json \
-  https://api.tailscale.com/api/v2/tailnet/-/acl
+# Your tailnet identity that will be allowed to SSH into the runner.
+export OPERATOR='<your-email>'
+# Exchange the OAuth client credentials for a short-lived API token.
+TOKEN=$(curl -sf https://api.tailscale.com/api/v2/oauth/token -d "client_id=$TS_ID" -d "client_secret=$TS_SECRET" | jq -r .access_token)
+# Fetch the current tailnet policy and add the tag owner plus a tcp:2222 grant for the operator.
+curl -sf -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' https://api.tailscale.com/api/v2/tailnet/-/acl | jq --arg op "$OPERATOR" '.tagOwners["tag:cinder"] = ["autogroup:admin"] | .grants = ((.grants // []) + [{"src":[$op],"dst":["tag:cinder"],"ip":["tcp:2222"]}])' > /tmp/cinder-acl.json
+# Push the updated policy back to Tailscale.
+curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/cinder-acl.json https://api.tailscale.com/api/v2/tailnet/-/acl
 ```
 
 See [network setup](docs/setup.md) for policy caveats and troubleshooting.
@@ -53,7 +57,7 @@ See [network setup](docs/setup.md) for policy caveats and troubleshooting.
 
 ```bash
 # Start a cinder; stdout contains the generated run ID after SSH becomes available.
-CINDER_ID=$(./cinder warmup --repo OWNER/REPO --ref main)
+CINDER_ID=$(./cinder warmup --repo $OWNER/$REPO --ref main)
 
 # Upload local changes and run tests remotely.
 ./cinder sync "$CINDER_ID" .
@@ -73,4 +77,3 @@ python3 -m unittest discover -s tests -v
 `sync` copies files without deleting remote files and excludes `.git/` and `.cinders/`. Local state and SSH keys reside in `.cinders/`. `warmup --wait SECONDS` changes the readiness timeout, not the SSH lifetime.
 
 See [lifecycle and limitations](docs/design.md) and [agent usage](docs/agent.md). Live GitHub and Tailscale integration remains unverified.
-# cinders

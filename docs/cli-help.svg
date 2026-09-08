@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="308" viewBox="0 0 1000 308" role="img" aria-label="Actual local Cinder CLI help output"><rect width="1000" height="308" rx="12" fill="#211b2c"/><g font-family="monospace" font-size="16" xml:space="preserve"><text x="24" y="40" fill="#e9e1f2">$ ./cinder --help</text>
+<text x="24" y="63" fill="#e9e1f2">usage: cinder [-h] {warmup,status,run,ssh,sync,stop} ...</text>
+<text x="24" y="86" fill="#e9e1f2"></text>
+<text x="24" y="109" fill="#e9e1f2">Warm up a cinder. Run your checks over SSH. Expires after 20 minutes.</text>
+<text x="24" y="132" fill="#e9e1f2"></text>
+<text x="24" y="155" fill="#e9e1f2">positional arguments:</text>
+<text x="24" y="178" fill="#e9e1f2">  {warmup,status,run,ssh,sync,stop}</text>
+<text x="24" y="201" fill="#e9e1f2">    warmup              Dispatch a cinder and wait for SSH readiness</text>
+<text x="24" y="224" fill="#e9e1f2"></text>
+<text x="24" y="247" fill="#e9e1f2">options:</text>
+<text x="24" y="270" fill="#e9e1f2">  -h, --help            show this help message and exit</text></g></svg>

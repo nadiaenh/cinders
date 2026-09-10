@@ -1,0 +1,5 @@
+brew "python@3.12"
+brew "gh"
+brew "rsync"
+brew "jq"
+brew "tailscale"

@@ -20,33 +20,33 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Validate request
+      - name: Validate the connection request
         env:
           CINDER_PUBLIC_KEY: ${{ inputs.ssh_public_key }}
-        run: python3 scripts/runner.py validate
-      - name: Join private network
+        run: python3 src/cinders/runner.py validate
+      - name: Join the private network
         uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:cinder
           hostname: cinder-${{ github.run_id }}
-      - name: Start SSH cinder
+      - name: Start the SSH cinder
         env:
           CINDER_PUBLIC_KEY: ${{ inputs.ssh_public_key }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y openssh-server rsync
-          sudo --preserve-env=CINDER_PUBLIC_KEY,GITHUB_RUN_ID,GITHUB_RUN_ATTEMPT,GITHUB_WORKSPACE,RUNNER_TEMP python3 scripts/runner.py start
-      - name: Publish connection details
+          sudo --preserve-env=CINDER_PUBLIC_KEY,GITHUB_RUN_ID,GITHUB_RUN_ATTEMPT,GITHUB_WORKSPACE,RUNNER_TEMP python3 src/cinders/runner.py start
+      - name: Publish the connection details
         uses: actions/upload-artifact@v7
         with:
           name: cinder-${{ github.run_id }}
           path: ${{ runner.temp }}/cinder-connection/connection.json
           retention-days: 1
           if-no-files-found: error
-      - name: Hold cinder until expiry
-        run: python3 scripts/runner.py hold
-      - name: Close SSH sessions
+      - name: Hold the cinder open until it expires
+        run: python3 src/cinders/runner.py hold
+      - name: Close the SSH sessions
         if: always()
         run: sudo systemctl stop cinder-sshd.service || true

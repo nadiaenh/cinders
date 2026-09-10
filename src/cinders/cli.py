@@ -1,4 +1,4 @@
-"""Small GitHub Actions / OpenSSH cinder client. Requires gh, ssh and ssh-keygen."""
+"""GitHub Actions / OpenSSH cinder client. Requires gh, ssh, ssh-keygen, rsync."""
 import argparse
 import base64
 import io
@@ -14,7 +14,7 @@ import tempfile
 import time
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 STATE = ROOT / '.cinders'
 WORKFLOW = 'cinder.yml'
 

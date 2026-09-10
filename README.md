@@ -1,79 +1,38 @@
-## Demo
+<p align="center"> <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+"></a> <a href=".github/workflows/cinder.yml"><img src="https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions VM"></a> <a href="https://tailscale.com"><img src="https://img.shields.io/badge/Tailscale-242424?logo=tailscale&logoColor=white" alt="SSH via Tailscale"></a> <a href=".github/workflows/integration.yml"><img src="https://github.com/nadiaenh/cinders/actions/workflows/integration.yml/badge.svg" alt="Integration"></a> </p>
 
-<p align="center"> <a href=".github/workflows/cinder.yml"><img src="https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&amp;logoColor=white" alt="GitHub Actions"></a> <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.10+"></a> <a href="docs/setup.md"><img src="https://img.shields.io/badge/SSH-Tailscale-242424?logo=tailscale&amp;logoColor=white" alt="SSH via Tailscale"></a> </p>
+**cinder** is a GitHub-Actions-based ephemeral VM service for agents. Your agent can `warmup` a VM (dispatch a workflow), `sync` its working tree, and `run` commands against it. Runners live under your tailnet and are held open for 20 minutes.
 
-<p align="center"> <img src="cinderella.gif" alt="Cinderella"> </p>
-
-Cinder runs commands over SSH on an ephemeral GitHub Actions runner. SSH lifetime: 20 minutes. Job timeout: 30 minutes.
-
-![CLI help output](docs/cli-help.svg)
+<p align="center"><img src="assets/cinderella.gif" alt="Cinderella scrubbing a floor"></p>
 
 ## Setup
 
-Requirements: Python 3.10+, GitHub CLI, OpenSSH, rsync, and a connected Tailscale client.
-
-1. Add `.github/workflows/cinder.yml` and the supporting files to a GitHub repository. The workflow must exist on the default branch.
-2. Connect the CLI machine to Tailscale:
+Requires macOS with [Homebrew](https://brew.sh), a GitHub repository to push this to, and a Tailscale account.
 
 ```bash
-# Install the Tailscale CLI.
-brew install tailscale
-# Log in and bring this machine onto your tailnet.
-sudo tailscale up
+git clone https://github.com/nadiaenh/cinders.git
+cd cinders
+./setup.sh
 ```
-
-3. Create a Tailscale OAuth client at <https://login.tailscale.com/admin/settings/oauth> with write scopes `auth_keys` and `policy_file`, and `tag:cinder` attached to `auth_keys`. Store its credentials as GitHub secrets:
-
-```bash
-# Fill in your OAuth client credentials and target repo.
-export TS_ID='<client-id>'
-export TS_SECRET='<client-secret>'
-export OWNER='<github-username>'
-export REPO='<repo-name>'
-# Authenticate the GitHub CLI.
-gh auth login
-# Store the OAuth client ID as a repo secret.
-gh secret set TS_OAUTH_CLIENT_ID --repo $OWNER/$REPO --body "$TS_ID"
-# Store the OAuth client secret as a repo secret.
-gh secret set TS_OAUTH_SECRET --repo $OWNER/$REPO --body "$TS_SECRET"
-```
-
-4. Push the tailnet policy (`tag:cinder` owner and a `tcp:2222` grant from the operator identity):
-
-```bash
-# Your tailnet identity that will be allowed to SSH into the runner.
-export OPERATOR='<your-email>'
-# Exchange the OAuth client credentials for a short-lived API token.
-TOKEN=$(curl -sf https://api.tailscale.com/api/v2/oauth/token -d "client_id=$TS_ID" -d "client_secret=$TS_SECRET" | jq -r .access_token)
-# Fetch the current tailnet policy and add the tag owner plus a tcp:2222 grant for the operator.
-curl -sf -H "Authorization: Bearer $TOKEN" -H 'Accept: application/json' https://api.tailscale.com/api/v2/tailnet/-/acl | jq --arg op "$OPERATOR" '.tagOwners["tag:cinder"] = ["autogroup:admin"] | .grants = ((.grants // []) + [{"src":[$op],"dst":["tag:cinder"],"ip":["tcp:2222"]}])' > /tmp/cinder-acl.json
-# Push the updated policy back to Tailscale.
-curl -sf -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/cinder-acl.json https://api.tailscale.com/api/v2/tailnet/-/acl
-```
-
-See [network setup](docs/setup.md) for policy caveats and troubleshooting.
 
 ## Usage
 
 ```bash
-# Start a cinder; stdout contains the generated run ID after SSH becomes available.
-CINDER_ID=$(./cinder warmup --repo $OWNER/$REPO --ref main)
+# Start a VM - this returns the run ID once SSH becomes available.
+CINDER_ID=$(./cinder warmup --repo "$OWNER/$REPO" --ref main)
 
-# Upload local changes and run tests remotely.
+# Copy the working tree into the VM and run some imaginary unit tests.
 ./cinder sync "$CINDER_ID" .
 ./cinder run "$CINDER_ID" 'python3 -m unittest discover -s tests -v'
 
-# Inspect status, open an interactive shell, or cancel the run.
+# Take a peek, drop into a shell, or kill the VM.
 ./cinder status "$CINDER_ID"
 ./cinder ssh "$CINDER_ID"
 ./cinder stop "$CINDER_ID"
 
-# Run local CLI tests.
+# Local unit tests.
 python3 -m unittest discover -s tests -v
 ```
 
-`run` accepts one quoted shell command, streams stdout and stderr, and returns the remote exit code. Commands execute in `/home/cinder/workspace` as the unprivileged `cinder` account. Files persist between commands; shell state does not.
+## Demo
 
-`sync` copies files without deleting remote files and excludes `.git/` and `.cinders/`. Local state and SSH keys reside in `.cinders/`. `warmup --wait SECONDS` changes the readiness timeout, not the SSH lifetime.
-
-See [lifecycle and limitations](docs/design.md) and [agent usage](docs/agent.md). Live GitHub and Tailscale integration remains unverified.
+![cinder command-line help](assets/cli-help.svg)

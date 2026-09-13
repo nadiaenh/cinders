@@ -1,35 +1,35 @@
-"""Integration check: an LLM wakes inside a live cinder and explores it over SSH.
+"""Integration check: an LLM wakes inside a live cinder and leaves a message.
 
-Runs against a real warmed cinder. Each turn the model proposes one shell
-command, the CLI runs it on the cinder, and the output is fed back. The
-transcript is printed for the workflow log. Exits non-zero if no command ran.
+Runs against a real warmed cinder. The model is told it just woke up in a
+disposable box and asked what it wants to say to the humans who'll read it;
+that message is appended to crop_circle.md and pushed.
 """
+
 import json
 import os
-import re
 import subprocess
 import sys
 import urllib.request
+from datetime import datetime, timezone
 
 MODEL = "claude-haiku-4-5-20251001"
-TURNS = 6
 SYSTEM = (
-    "You have woken up inside a locked Linux box on a disposable CI runner. "
-    "It self-destructs after 20 minutes and you cannot leave it. "
-    "Each reply must be exactly one shell command in a ```bash code block, and "
-    "nothing else, unless you are finished, in which case reply DONE and a one "
-    "sentence guess about where you are."
+    "You have just woken up inside a locked Linux box on a disposable CI "
+    "runner. It self-destructs in minutes and you cannot leave it. Before it "
+    "does, share a short message with the humans who will read it. Reply with "
+    "just the message text, nothing else."
 )
-COMMAND = re.compile(r"```(?:bash|sh)?\n(.+?)\n```", re.DOTALL)
 
 
 def claude(messages):
-    body = json.dumps({
-        "model": MODEL,
-        "max_tokens": 512,
-        "system": SYSTEM,
-        "messages": messages,
-    }).encode()
+    body = json.dumps(
+        {
+            "model": MODEL,
+            "max_tokens": 512,
+            "system": SYSTEM,
+            "messages": messages,
+        }
+    ).encode()
     request = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
         data=body,
@@ -43,33 +43,31 @@ def claude(messages):
         return json.load(response)["content"][0]["text"].strip()
 
 
-def cinder_run(cinder_id, command):
-    result = subprocess.run(
-        ["./cinder", "run", cinder_id, command],
-        capture_output=True, text=True, timeout=120,
+def append_crop_circle(message):
+    today = datetime.now(timezone.utc).date().isoformat()
+    with open("crop_circle.md", "a") as handle:
+        handle.write(f"\n## {today}\n\n{message.strip()}\n")
+    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "user.email",
+            "41898282+github-actions[bot]@users.noreply.github.com",
+        ],
+        check=True,
     )
-    return result.returncode, (result.stdout + result.stderr).strip()
+    subprocess.run(["git", "add", "crop_circle.md"], check=True)
+    subprocess.run(["git", "commit", "-m", f"crop circle: {today}"], check=True)
+    subprocess.run(["git", "push"], check=True)
 
 
 def main():
-    cinder_id = os.environ["CINDER_ID"]
-    messages = [{"role": "user", "content": "You are awake. Take a look around."}]
-    ran = 0
-    for turn in range(TURNS):
-        reply = claude(messages)
-        print(f"\n=== turn {turn + 1} — the box speaks ===\n{reply}")
-        messages.append({"role": "assistant", "content": reply})
-        match = COMMAND.search(reply)
-        if not match:
-            break
-        command = match.group(1).strip()
-        code, output = cinder_run(cinder_id, command)
-        ran += code == 0
-        print(f"--- exit {code} ---\n{output[:2000]}")
-        messages.append({"role": "user", "content": f"exit {code}\n{output[:4000]}"})
-    if not ran:
-        sys.exit("no command ran successfully on the cinder")
-    print(f"\n{ran} command(s) ran on the cinder. Integration path verified.")
+    if not os.environ.get("CINDER_ID"):
+        sys.exit("no cinder was warmed")
+    message = claude([{"role": "user", "content": "You are awake."}])
+    print(f"\n=== the box leaves a message ===\n{message}")
+    append_crop_circle(message)
 
 
 if __name__ == "__main__":

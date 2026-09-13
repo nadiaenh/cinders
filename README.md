@@ -1,6 +1,6 @@
 <p align="center"> <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+"></a> <a href=".github/workflows/cinder.yml"><img src="https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions VM"></a> <a href="https://tailscale.com"><img src="https://img.shields.io/badge/Tailscale-242424?logo=tailscale&logoColor=white" alt="SSH via Tailscale"></a> <a href=".github/workflows/integration.yml"><img src="https://github.com/nadiaenh/cinders/actions/workflows/integration.yml/badge.svg" alt="Integration"></a> </p>
 
-**cinder** is a GitHub-Actions-based ephemeral VM service for agents. Your agent can `warmup` a VM (dispatch a workflow), `sync` its working tree, and `run` commands against it. Runners live under your tailnet and are held open for 20 minutes.
+**cinders** is a GitHub-Actions-based ephemeral VM service for agents. Your agent can `warmup` a VM (dispatch a workflow), `sync` its working tree, and `run` commands against it. Runners live under your tailnet and are held open for 20 minutes.
 
 <p align="center"><img src="assets/cinderella.gif" alt="Cinderella scrubbing a floor"></p>
 

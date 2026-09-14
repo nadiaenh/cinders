@@ -9,7 +9,7 @@
 Requires macOS with [Homebrew](https://brew.sh), a GitHub repository to push this to, and a Tailscale account.
 
 ```bash
-git clone https://github.com/nadiaenh/cinders.git
+git clone git@github.com:nadiaenh/cinders.git
 cd cinders
 ./setup.sh
 ```

@@ -2,7 +2,7 @@
 
 **cinders** is a GitHub-Actions-based ephemeral VM service for agents. Your agent can `warmup` a VM (dispatch a workflow), `sync` its working tree, and `run` commands against it. Runners live under your tailnet and are held open for 20 minutes.
 
-<p align="center"><img src="assets/cinderella.gif" alt="Cinderella scrubbing a floor"></p>
+<p align="center"><img src="assets/cinders.gif" alt="Cinderella scrubbing a floor"></p>
 
 ## Setup
 
